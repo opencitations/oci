@@ -1,3 +1,3 @@
-prefix,supplier name,supplier url
-,OpenCitations Corpus,http://opencitations.net
-010,Wikidata,https://www.wikidata.org
+prefix,supplier name,supplier url,comment
+,OpenCitations Corpus,http://opencitations.net,Prior to February 2018
+010,Wikidata,https://www.wikidata.org,
