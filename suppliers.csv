@@ -6,9 +6,11 @@ prefix,supplier name,supplier url,comment
 040,arXiv,https://arxiv.org,
 050,Europe PubMed Central,https://europepmc.org,
 060,CiteSeerX,http://citeseerx.ist.psu.edu,
+070,Japanese Science and Technology Agency,https://www.jst.go.jp/EN/,
 0110,Excite,https://west.uni-koblenz.de/en/research/excite,
 0120,Linked Books,https://dhlab.epfl.ch/page-127959-en.html,
 0130,LOC-DB,https://locdb.bib.uni-mannheim.de,
+0140,CitEcCyr,https://github.com/citeccyr/,
 01110,Raspberry Pi 1,http://opencitations.net,within OpenCitations
 01120,Raspberry Pi 2,http://opencitations.net,within OpenCitations
 01130,Raspberry Pi 3,http://opencitations.net,within OpenCitations
