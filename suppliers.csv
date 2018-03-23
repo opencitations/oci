@@ -7,8 +7,8 @@ prefix,supplier name,supplier url,comment
 050,Europe PubMed Central,https://europepmc.org,
 060,CiteSeerX,http://citeseerx.ist.psu.edu,
 070,Japanese Science and Technology Agency,https://www.jst.go.jp/EN/,
-0110,Excite,https://west.uni-koblenz.de/en/research/excite,
-0120,Linked Books,https://dhlab.epfl.ch/page-127959-en.html,
+0110,EXCITE Project,https://west.uni-koblenz.de/en/research/excite,
+0120,Venice Scholar Index,https://dhlab.epfl.ch/page-127959-en.html,
 0130,LOC-DB,https://locdb.bib.uni-mannheim.de,
 0140,CitEcCyr,https://github.com/citeccyr/,
 01110,Raspberry Pi 1,http://opencitations.net,within OpenCitations
