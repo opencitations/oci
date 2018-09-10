@@ -8,7 +8,7 @@ prefix,supplier name,supplier url,comment
 060,CiteSeerX,http://citeseerx.ist.psu.edu,
 070,Japanese Science and Technology Agency,https://www.jst.go.jp/EN/,
 080,Crossref,https://crossref.org,
-0110,EXCITE Project,https://west.uni-koblenz.de/en/research/excite,
+0110,EXCITE Project,https://west.uni-koblenz.de/en/research/excite,within OpenCitations
 0120,Venice Scholar Index,https://dhlab.epfl.ch/page-127959-en.html,
 0130,LOC-DB,https://locdb.bib.uni-mannheim.de,
 0140,CitEcCyr,https://github.com/citeccyr/,
