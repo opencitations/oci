@@ -7,7 +7,8 @@
             "tp": "https://w3id.org/oc/sparql",
             "use_it": "yes",
             "id_type": "occ",
-            "id_shape": "https://w3id.org/oc/corpus/(br/[[XXX]])"
+            "id_shape": "https://w3id.org/oc/corpus/(br/[[XXX]])",
+            "avoid_prefix_removal": "yes"
         },
         {
             "name": "COCI",
