@@ -52,18 +52,18 @@
         {
             "name": "Dryad",
             "query": {
-                "citing": ["DryadDataPackage::references->remove(https://doi.org/)->shape(http://dx.doi.org/)"],
-                "cited": ["DryadDataPackage::identifier->remove(https://doi.org/)->shape(http://dx.doi.org/)"],
-                "citing_date": ["api(https://api.crossref.org/works/[[CITING]])::message::issued::date-parts::[0]->datestrings()->join(-)"],
-                "cited_date": ["DryadDataPackage::available->normdate()"]
+                "citing": ["DryadDataPackage::identifier->remove(https://doi.org/)->shape(http://dx.doi.org/)"],
+                "cited": ["DryadDataPackage::references->remove(https://doi.org/)->shape(http://dx.doi.org/)"],
+                "citing_date": ["DryadDataPackage::available->normdate()"],
+                "cited_date": ["api(https://api.crossref.org/works/[[CITED]])::message::issued::date-parts::[0]->datestrings()->join(-)"]
             },
             "prefix": ["040"],
-            "api": "http://api.datadryad.org/mn/object/doi:[[CITED]]",
+            "api": "http://api.datadryad.org/mn/object/doi:[[CITING]]",
             "use_it": "yes",
             "preprocess": ["decode", "encode"],
             "id_type": "doi",
             "id_shape": "http://dx.doi.org/([[XXX__decode]])",
-            "citation_type": "supplement"
+            "citation_type": "reference"
         }
     ]
 }
