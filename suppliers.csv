@@ -1,43 +1,14 @@
 prefix,supplier name,supplier url,comment
-,OpenCitations Corpus,https://w3id.org/oc/corpus,Prior to February 2018
 010,Wikidata,https://www.wikidata.org,
 020,Crossref,https://crossref.org,
-030,DataCite,https://datacite.org,
-040,arXiv,https://arxiv.org,
+030,OpenCitations Corpus,https://w3id.org/oc/corpus,
+040,Dryad,https://datadryad.org,
 050,Europe PubMed Central,https://europepmc.org,
 060,CiteSeerX,http://citeseerx.ist.psu.edu,
 070,Japanese Science and Technology Agency,https://www.jst.go.jp/EN/,
-0110,EXCITE Project,https://west.uni-koblenz.de/en/research/excite,within the OpenCitations Corpus
+080,DataCite,https://datacite.org,
+090,arXiv,https://arxiv.org,
+0110,EXCITE Project,https://west.uni-koblenz.de/en/research/excite,ingested within the OpenCitations Corpus
 0120,Venice Scholar Index,https://dhlab.epfl.ch/page-127959-en.html,
 0130,LOC-DB,https://locdb.bib.uni-mannheim.de,
 0140,CitEcCyr,https://github.com/citeccyr/,
-01110,Raspberry Pi 1,https://w3id.org/oc/corpus,within the OpenCitations Corpus
-01120,Raspberry Pi 2,https://w3id.org/oc/corpus,within the OpenCitations Corpus
-01130,Raspberry Pi 3,https://w3id.org/oc/corpus,within the OpenCitations Corpus
-01140,Raspberry Pi 4,https://w3id.org/oc/corpus,within the OpenCitations Corpus
-01150,Raspberry Pi 5,https://w3id.org/oc/corpus,within the OpenCitations Corpus
-01160,Raspberry Pi 6,https://w3id.org/oc/corpus,within the OpenCitations Corpus
-01170,Raspberry Pi 7,https://w3id.org/oc/corpus,within the OpenCitations Corpus
-01180,Raspberry Pi 8,https://w3id.org/oc/corpus,within the OpenCitations Corpus
-01190,Raspberry Pi 9,https://w3id.org/oc/corpus,within the OpenCitations Corpus
-01910,Raspberry Pi 10,https://w3id.org/oc/corpus,within the OpenCitations Corpus
-01210,Raspberry Pi 11,https://w3id.org/oc/corpus,within the OpenCitations Corpus
-01220,Raspberry Pi 12,https://w3id.org/oc/corpus,within the OpenCitations Corpus
-01230,Raspberry Pi 13,https://w3id.org/oc/corpus,within the OpenCitations Corpus
-01240,Raspberry Pi 14,https://w3id.org/oc/corpus,within the OpenCitations Corpus
-01250,Raspberry Pi 15,https://w3id.org/oc/corpus,within the OpenCitations Corpus
-01260,Raspberry Pi 16,https://w3id.org/oc/corpus,within the OpenCitations Corpus
-01270,Raspberry Pi 17,https://w3id.org/oc/corpus,within the OpenCitations Corpus
-01280,Raspberry Pi 18,https://w3id.org/oc/corpus,within the OpenCitations Corpus
-01290,Raspberry Pi 19,https://w3id.org/oc/corpus,within the OpenCitations Corpus
-01920,Raspberry Pi 20,https://w3id.org/oc/corpus,within the OpenCitations Corpus
-01310,Raspberry Pi 21,https://w3id.org/oc/corpus,within the OpenCitations Corpus
-01320,Raspberry Pi 22,https://w3id.org/oc/corpus,within the OpenCitations Corpus
-01330,Raspberry Pi 23,https://w3id.org/oc/corpus,within the OpenCitations Corpus
-01340,Raspberry Pi 24,https://w3id.org/oc/corpus,within the OpenCitations Corpus
-01350,Raspberry Pi 25,https://w3id.org/oc/corpus,within the OpenCitations Corpus
-01360,Raspberry Pi 26,https://w3id.org/oc/corpus,within the OpenCitations Corpus
-01370,Raspberry Pi 27,https://w3id.org/oc/corpus,within the OpenCitations Corpus
-01380,Raspberry Pi 28,https://w3id.org/oc/corpus,within the OpenCitations Corpus
-01390,Raspberry Pi 29,https://w3id.org/oc/corpus,within the OpenCitations Corpus
-01930,Raspberry Pi 30,https://w3id.org/oc/corpus,within the OpenCitations Corpus
