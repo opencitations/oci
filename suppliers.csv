@@ -4,11 +4,15 @@ prefix,supplier name,supplier url,comment
 030,OpenCitations Corpus,https://w3id.org/oc/corpus,
 040,Dryad,https://datadryad.org,
 050,Europe PubMed Central,https://europepmc.org,
-060,CiteSeerX,http://citeseerx.ist.psu.edu,
-070,Japanese Science and Technology Agency,https://www.jst.go.jp/EN/,
+060,Citations in Context Corpus,http://opencitations.net/ccc
+070,OpenCitations Meta,http://opencitations.net/meta
 080,DataCite,https://datacite.org,
 090,arXiv,https://arxiv.org,
 0110,EXCITE Project,https://west.uni-koblenz.de/en/research/excite,ingested within the OpenCitations Corpus
 0120,Venice Scholar Index,https://dhlab.epfl.ch/page-127959-en.html,
 0130,LOC-DB,https://locdb.bib.uni-mannheim.de,
 0140,CitEcCyr,https://github.com/citeccyr/,
+0150,CiteSeerX,http://citeseerx.ist.psu.edu,
+0160,Japanese Science and Technology Agency,https://www.jst.go.jp/EN/,
+
+
