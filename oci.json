@@ -75,6 +75,16 @@
             "id_type": "doi",
             "id_shape": "http://dx.doi.org/([[XXX__decode]])",
             "citation_type": "reference"
+        },
+        {
+            "name": "OpenCitations Citations in Context Corpus",
+            "query": "PREFIX cito: <http://purl.org/spar/cito/> PREFIX prism: <http://prismstandard.org/namespaces/basic/2.0/> SELECT ?citing ?cited ?citing_date ?cited_date WHERE { BIND(<https://w3id.org/oc/ccc/br/[[CITING]]> AS ?citing) BIND(<https://w3id.org/oc/ccc/br/[[CITED]]> AS ?cited) ?citing cito:cites ?cited . OPTIONAL { ?citing prism:publicationDate ?citing_date } OPTIONAL { ?cited prism:publicationDate ?cited_date } } LIMIT 1",
+            "prefix": ["070"],
+            "tp": "http://opencitations.net/ccc/sparql",
+            "use_it": "yes",
+            "id_type": "occ",
+            "id_shape": "https://w3id.org/oc/ccc/(br/[[XXX]])",
+            "citation_type": "reference"
         }
     ]
 }

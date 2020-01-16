@@ -1,6 +1,8 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
-# Copyright (c) 2018, Silvio Peroni <essepuntato@gmail.com>
+# Copyright (c) 2018,
+# Silvio Peroni <essepuntato@gmail.com>
+# Ivan Heibi <ivanhb.ita@gmail.com>
 #
 # Permission to use, copy, modify, and/or distribute this software for any purpose
 # with or without fee is hereby granted, provided that the above copyright notice
@@ -15,22 +17,23 @@
 # SOFTWARE.
 
 from argparse import ArgumentParser
+from collections import deque
+from csv import DictReader
+from csv import DictWriter
+from datetime import datetime
+from io import StringIO
+from json import dumps, load, loads, JSONDecodeError
+from os.path import exists, dirname
+from os import makedirs
+from errno import EEXIST
 from re import match, findall, sub
 from urllib.parse import quote, unquote
-from csv import DictReader
-from rdflib import Graph, RDF, RDFS, XSD, URIRef, Literal, Namespace
-from datetime import datetime
-from dateutil.relativedelta import relativedelta
-from dateutil.parser import parse
-from json import dumps, load, loads, JSONDecodeError
-from csv import DictWriter
-from io import StringIO
-from SPARQLWrapper import SPARQLWrapper, JSON
-from os.path import exists
-from collections import deque
-from requests import get
 from xml.etree import ElementTree
-
+from SPARQLWrapper import SPARQLWrapper, JSON
+from dateutil.parser import parse
+from dateutil.relativedelta import relativedelta
+from rdflib import ConjunctiveGraph, RDF, RDFS, XSD, URIRef, Literal, Namespace
+from requests import get
 
 REFERENCE_CITATION_TYPE = "reference"
 SUPPLEMENT_CITATION_TYPE = "supplement"
@@ -64,6 +67,7 @@ FORMATS = {
     "n-triples": "nt11",
     "ntriples": "nt11",
     "nt": "nt11",
+    "nq": "nquads",
     "text/plain": "nt11",
     "text/n-triples": "nt11",
     "csv": "csv",
@@ -72,102 +76,170 @@ FORMATS = {
 
 
 class Citation(object):
-    __cito_base = "http://purl.org/spar/cito/"
-    __cites = URIRef(__cito_base + "cites")
-    __citation = URIRef(__cito_base + "Citation")
-    __author_self_citation = URIRef(__cito_base + "AuthorSelfCitation")
-    __journal_self_citation = URIRef(__cito_base + "JournalSelfCitation")
-    __has_citation_creation_date = URIRef(__cito_base + "hasCitationCreationDate")
-    __has_citation_time_span = URIRef(__cito_base + "hasCitationTimeSpan")
-    __has_citing_entity = URIRef(__cito_base + "hasCitingEntity")
-    __has_cited_entity = URIRef(__cito_base + "hasCitedEntity")
+    cito_base = "http://purl.org/spar/cito/"
+    cites = URIRef(cito_base + "cites")
+    citation = URIRef(cito_base + "Citation")
+    author_self_citation = URIRef(cito_base + "AuthorSelfCitation")
+    journal_self_citation = URIRef(cito_base + "JournalSelfCitation")
+    has_citation_creation_date = URIRef(cito_base + "hasCitationCreationDate")
+    has_citation_time_span = URIRef(cito_base + "hasCitationTimeSpan")
+    has_citing_entity = URIRef(cito_base + "hasCitingEntity")
+    has_cited_entity = URIRef(cito_base + "hasCitedEntity")
 
-    __datacite_base = "http://purl.org/spar/datacite/"
-    __has_identifier = URIRef(__datacite_base + "hasIdentifier")
-    __identifier = URIRef(__datacite_base + "Identifier")
-    __uses_identifier_scheme = URIRef(__datacite_base + "usesIdentifierScheme")
-    __oci = URIRef(__datacite_base + "oci")
+    datacite_base = "http://purl.org/spar/datacite/"
+    has_identifier = URIRef(datacite_base + "hasIdentifier")
+    identifier = URIRef(datacite_base + "Identifier")
+    uses_identifier_scheme = URIRef(datacite_base + "usesIdentifierScheme")
+    oci = URIRef(datacite_base + "oci")
 
-    __literal_base = "http://www.essepuntato.it/2010/06/literalreification/"
-    __has_literal_value = URIRef(__literal_base + "hasLiteralValue")
+    literal_base = "http://www.essepuntato.it/2010/06/literalreification/"
+    has_literal_value = URIRef(literal_base + "hasLiteralValue")
 
-    __prism_base = "http://prismstandard.org/namespaces/basic/2.0/"
-    __publication_date = URIRef(__prism_base + "publicationDate")
+    prism_base = "http://prismstandard.org/namespaces/basic/2.0/"
+    publication_date = URIRef(prism_base + "publicationDate")
 
-    __prov_base = "http://www.w3.org/ns/prov#"
-    __was_attributed_to = URIRef(__prov_base + "wasAttributedTo")
-    __had_primary_source = URIRef(__prov_base + "hadPrimarySource")
-    __generated_at_time = URIRef(__prov_base + "generatedAtTime")
+    prov_base = "http://www.w3.org/ns/prov#"
+    prov_entity = URIRef(prov_base + "Entity")
+    was_attributed_to = URIRef(prov_base + "wasAttributedTo")
+    had_primary_source = URIRef(prov_base + "hadPrimarySource")
+    generated_at_time = URIRef(prov_base + "generatedAtTime")
+    invalidated_at_time = URIRef(prov_base + "invalidatedAtTime")
+    specialization_of = URIRef(prov_base + "specializationOf")
+    was_derived_from = URIRef(prov_base + "wasDerivedFrom")
+
+    oco_base = "https://w3id.org/oc/ontology/"
+    has_update_query = URIRef(oco_base + "hasUpdateQuery")
+
+    dc_base = "http://purl.org/dc/terms/"
+    description = URIRef(dc_base + "description")
+
+    header_citation_data = ["oci", "citing", "cited", "creation", "timespan",
+                              "journal_sc", "author_sc"]
+    header_provenance_data = ["oci", "snapshot", "agent", "source", "created",
+                              "invalidated", "description", "update"]
 
     def __init__(self,
                  oci, citing_url, citing_pub_date,
                  cited_url, cited_pub_date,
                  creation, timespan,
-                 prov_agent_url, source, prov_date,
+                 prov_entity_number, prov_agent_url, source, prov_date,
                  service_name, id_type, id_shape, citation_type,
-                 journal_sc=False, author_sc=False):
+                 journal_sc=False, author_sc=False,
+                 prov_inv_date=None, prov_description=None, prov_update=None):
         self.oci = oci
         self.citing_url = citing_url
         self.cited_url = cited_url
-        self.duration = timespan
-        self.creation_date = creation
+        self.duration = Citation.check_duration(timespan)
+        self.creation_date = Citation.check_date(creation[:10] if creation else creation)
         self.author_sc = "yes" if author_sc else "no"
         self.journal_sc = "yes" if journal_sc else "no"
-        self.citing_pub_date = citing_pub_date[:10] if citing_pub_date else citing_pub_date
-        self.cited_pub_date = cited_pub_date[:10] if cited_pub_date else cited_pub_date
+        self.citing_pub_date = Citation.check_date(citing_pub_date[:10] if citing_pub_date else citing_pub_date)
+        self.cited_pub_date = Citation.check_date(cited_pub_date[:10] if cited_pub_date else cited_pub_date)
+
         self.citation_type = citation_type if citation_type in CITATION_TYPES else DEFAULT_CITATION_TYPE
 
-        if self.contains_years(citing_pub_date):
-            self.creation_date = citing_pub_date[:10]
+        # Set uniformly all the time-related data in a citation
+        if self.citing_pub_date is None and self.creation_date is not None:
+            self.citing_pub_date = self.creation_date
+        if self.cited_pub_date is None and self.creation_date is not None and self.duration:
+            self.cited_pub_date = Citation.check_date(Citation.get_date(self.creation_date, self.duration))
+        if self.cited_pub_date is None:
+            self.duration = None
 
-            if self.contains_years(cited_pub_date):
-                citing_contains_months = Citation.contains_months(citing_pub_date)
-                cited_contains_months = Citation.contains_months(cited_pub_date)
-                citing_contains_days = Citation.contains_days(citing_pub_date)
-                cited_contains_days = Citation.contains_days(cited_pub_date)
+        if self.contains_years(self.citing_pub_date):
+            self.creation_date = self.citing_pub_date[:10]
+
+            if self.contains_years(self.cited_pub_date):
+                citing_contains_months = Citation.contains_months(self.citing_pub_date)
+                cited_contains_months = Citation.contains_months(self.cited_pub_date)
+                citing_contains_days = Citation.contains_days(self.citing_pub_date)
+                cited_contains_days = Citation.contains_days(self.cited_pub_date)
 
                 # Handling incomplete dates
                 citing_complete_pub_date = self.creation_date
-                cited_complete_pub_date = cited_pub_date[:10]
+                cited_complete_pub_date = self.cited_pub_date[:10]
                 if citing_contains_months and not cited_contains_months:
-                    cited_complete_pub_date += citing_pub_date[4:7]
+                    cited_complete_pub_date += self.citing_pub_date[4:7]
                 elif not citing_contains_months and cited_contains_months:
-                    citing_complete_pub_date += cited_pub_date[4:7]
+                    citing_complete_pub_date += self.cited_pub_date[4:7]
                 if citing_contains_days and not cited_contains_days:
-                    cited_complete_pub_date += citing_pub_date[7:]
+                    cited_complete_pub_date += self.citing_pub_date[7:]
                 elif not citing_contains_days and cited_contains_days:
-                    citing_complete_pub_date += cited_pub_date[7:]
+                    citing_complete_pub_date += self.cited_pub_date[7:]
 
-                citing_pub_datetime = parse(citing_complete_pub_date, default=DEFAULT_DATE)
-                cited_pub_datetime = parse(cited_complete_pub_date, default=DEFAULT_DATE)
+                try:
+                    citing_pub_datetime = parse(citing_complete_pub_date, default=DEFAULT_DATE)
+                except ValueError:  # It is not a leap year
+                    citing_pub_datetime = parse(citing_complete_pub_date[:7] + "-28", default=DEFAULT_DATE)
+                try:
+                    cited_pub_datetime = parse(cited_complete_pub_date, default=DEFAULT_DATE)
+                except ValueError:  # It is not a leap year
+                    cited_pub_datetime = parse(cited_complete_pub_date[:7] + "-28", default=DEFAULT_DATE)
+
                 delta = relativedelta(citing_pub_datetime, cited_pub_datetime)
                 self.duration = Citation.get_duration(
                     delta,
                     citing_contains_months and cited_contains_months,
                     citing_contains_days and cited_contains_days)
 
-        if not self.citing_pub_date and self.creation_date:
-            self.citing_pub_date = self.creation_date
-
-        if self.creation_date and self.duration:
-            self.cited_pub_date = Citation.get_date(self.creation_date, self.duration)
-
+        self.prov_entity_number = prov_entity_number
         self.prov_agent_url = prov_agent_url
-        self.source = source
-        self.prov_date = prov_date
+        self.prov_date = Citation.check_datetime(prov_date)
         self.service_name = service_name
+        self.prov_inv_date = Citation.check_datetime(prov_inv_date)
+        self.prov_description = Citation.check_string(prov_description)
+        self.prov_update = Citation.check_string(prov_update)
+
         self.id_type = id_type
         self.id_shape = id_shape
 
+        self.source = source
+        if "[[citing]]" in self.source:
+            self.source = self.source.replace("[[citing]]", quote(self.get_id(citing_url)))
+        elif "[[cited]]" in self.source:
+            self.source = self.source.replace("[[cited]]", quote(self.get_id(cited_url)))
+
+    @staticmethod
+    def check_duration(s):
+        duration = sub("\s+", "", s) if s is not None else ""
+        if not match("^-?P[0-9]+Y(([0-9]+M)([0-9]+D)?)?$", duration):
+            duration = None
+        return duration
+
+    @staticmethod
+    def check_date(s):
+        date = sub("\s+", "", s)[:10] if s is not None else ""
+        if not match("^[0-9]{4}(-[0-9]{2}(-[0-9]{2})?)?$", date):
+            date = None
+        if date is not None:
+            try:  # Check if the date found is valid
+                parse(date, default=DEFAULT_DATE)
+            except ValueError:
+                date = None
+        return date
+
+    @staticmethod
+    def check_datetime(s):
+        datetime = sub("\s+", "", s)[:19] if s is not None else ""
+        if not match("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}$", datetime):
+            datetime = None
+        return datetime
+
+    @staticmethod
+    def check_string(s):
+        if not match("^.+$", sub("\s+", "", s) if s is not None else ""):
+            return None
+        return s
+
     @staticmethod
     def set_ns(g):
-        g.namespace_manager.bind("cito", Namespace(Citation.__cito_base))
-        g.namespace_manager.bind("datacite", Namespace(Citation.__datacite_base))
-        g.namespace_manager.bind("literal", Namespace(Citation.__literal_base))
-        g.namespace_manager.bind("prov", Namespace(Citation.__prov_base))
+        g.namespace_manager.bind("cito", Namespace(Citation.cito_base))
+        g.namespace_manager.bind("datacite", Namespace(Citation.datacite_base))
+        g.namespace_manager.bind("literal", Namespace(Citation.literal_base))
+        g.namespace_manager.bind("prov", Namespace(Citation.prov_base))
 
     def get_citation_rdf(self, baseurl, include_oci=True, include_label=True, include_prov=True):
-        citation_graph, citation, citation_corpus_id = self.__get_citation_rdf_entity(baseurl)
+        citation_graph, citation, citation_corpus_id, prov_entity = self.__get_citation_rdf_entity(baseurl)
 
         citing_br = URIRef(self.citing_url)
         cited_br = URIRef(self.cited_url)
@@ -175,14 +247,14 @@ class Citation(object):
         if include_label:
             citation_graph.add((citation, RDFS.label,
                                 Literal("citation %s [%s]" % (self.oci, citation_corpus_id))))
-        citation_graph.add((citation, RDF.type, self.__citation))
+        citation_graph.add((citation, RDF.type, self.citation))
         if self.author_sc == "yes":
-            citation_graph.add((citation, RDF.type, self.__author_self_citation))
+            citation_graph.add((citation, RDF.type, self.author_self_citation))
         if self.journal_sc == "yes":
-            citation_graph.add((citation, RDF.type, self.__journal_self_citation))
+            citation_graph.add((citation, RDF.type, self.journal_self_citation))
 
-        citation_graph.add((citation, self.__has_citing_entity, citing_br))
-        citation_graph.add((citation, self.__has_cited_entity, cited_br))
+        citation_graph.add((citation, self.has_citing_entity, citing_br))
+        citation_graph.add((citation, self.has_cited_entity, cited_br))
 
         if self.creation_date is not None:
             if Citation.contains_days(self.creation_date):
@@ -192,10 +264,10 @@ class Citation(object):
             else:
                 xsd_type = XSD.gYear
 
-            citation_graph.add((citation, self.__has_citation_creation_date,
+            citation_graph.add((citation, self.has_citation_creation_date,
                                 Literal(self.creation_date, datatype=xsd_type, normalize=False)))
             if self.duration is not None:
-                citation_graph.add((citation, self.__has_citation_time_span,
+                citation_graph.add((citation, self.has_citation_time_span,
                                     Literal(self.duration, datatype=XSD.duration)))
 
         if include_oci:
@@ -209,33 +281,57 @@ class Citation(object):
         return citation_graph
 
     def get_citation_prov_rdf(self, baseurl):
-        citation_graph, citation, citation_corpus_id = self.__get_citation_rdf_entity(baseurl)
+        citation_graph, citation, citation_corpus_id, prov_entity = \
+            self.__get_citation_rdf_entity(baseurl, is_prov=True)
 
-        citation_graph.add((citation, self.__was_attributed_to, URIRef(self.prov_agent_url)))
-        citation_graph.add((citation, self.__had_primary_source, URIRef(self.source)))
-        citation_graph.add((citation, self.__generated_at_time, Literal(self.prov_date, datatype=XSD.dateTime)))
+        citation_graph.add((prov_entity, RDF.type, self.prov_entity))
+        citation_graph.add((prov_entity, self.specialization_of, citation))
+        citation_graph.add((prov_entity, self.was_attributed_to, URIRef(self.prov_agent_url)))
+        citation_graph.add((prov_entity, self.had_primary_source, URIRef(self.source)))
+        citation_graph.add((prov_entity, self.generated_at_time,
+                            Literal(self.prov_date, datatype=XSD.dateTime)))
+
+        if self.prov_inv_date is not None:
+            citation_graph.add((prov_entity, self.invalidated_at_time,
+                                Literal(self.prov_inv_date, datatype=XSD.dateTime)))
+        if self.prov_description is not None:
+            citation_graph.add((prov_entity, self.description,
+                                Literal(self.prov_description)))
+        if self.prov_update is not None:
+            citation_graph.add((prov_entity, self.has_update_query,
+                                Literal(self.prov_update)))
+            citation_graph.add((prov_entity, self.was_derived_from,
+                                URIRef(str(prov_entity).rsplit("/", 1)[0] + "/" +
+                                       str(self.prov_entity_number - 1))))
 
         return citation_graph
 
-    def __get_citation_rdf_entity(self, baseurl):
-        citation_graph = Graph()
-        Citation.set_ns(citation_graph)
-
+    def __get_citation_rdf_entity(self, baseurl, is_prov=False):
         oci_no_prefix = self.oci.replace("oci:", "")
         citation_corpus_id = "ci/" + oci_no_prefix
         citation = URIRef(baseurl + citation_corpus_id)
+        prov_entity = None
 
-        return citation_graph, citation, citation_corpus_id
+        if is_prov:
+            prov_url = baseurl + citation_corpus_id + "/prov/"
+            prov_entity = URIRef(prov_url + "se/" + str(self.prov_entity_number))
+            citation_graph = ConjunctiveGraph(identifier=prov_url)
+        else:
+            citation_graph = ConjunctiveGraph()
+        Citation.set_ns(citation_graph)
+
+        return citation_graph, citation, citation_corpus_id, prov_entity
 
     def get_oci_rdf(self, baseurl, include_label=True, include_prov=True):
-        identifier_graph, identifier, identifier_local_id, identifier_corpus_id = self.__get_oci_rdf_entity(baseurl)
+        identifier_graph, identifier, identifier_local_id, identifier_corpus_id, prov_entity = \
+            self.__get_oci_rdf_entity(baseurl)
 
         if include_label:
             identifier_graph.add((identifier, RDFS.label,
                                   Literal("identifier %s [%s]" % (identifier_local_id, identifier_corpus_id))))
-        identifier_graph.add((identifier, RDF.type, self.__identifier))
-        identifier_graph.add((identifier, self.__uses_identifier_scheme, self.__oci))
-        identifier_graph.add((identifier, self.__has_literal_value, Literal(self.oci)))
+        identifier_graph.add((identifier, RDF.type, self.identifier))
+        identifier_graph.add((identifier, self.uses_identifier_scheme, self.oci))
+        identifier_graph.add((identifier, self.has_literal_value, Literal(self.oci)))
 
         if include_prov:
             for s, p, o in self.get_oci_prov_rdf(baseurl).triples((None, None, None)):
@@ -244,37 +340,47 @@ class Citation(object):
         return identifier_graph
 
     def get_oci_prov_rdf(self, baseurl):
-        identifier_graph, identifier, identifier_local_id, identifier_corpus_id = self.__get_oci_rdf_entity(baseurl)
+        identifier_graph, identifier, identifier_local_id, identifier_corpus_id, prov_entity = \
+            self.__get_oci_rdf_entity(baseurl, True)
 
-        identifier_graph.add((identifier, self.__was_attributed_to, URIRef(self.prov_agent_url)))
-        identifier_graph.add((identifier, self.__had_primary_source, URIRef(self.source)))
-        identifier_graph.add((identifier, self.__generated_at_time,
+        identifier_graph.add((prov_entity, RDF.type, self.prov_entity))
+        identifier_graph.add((prov_entity, self.specialization_of, identifier))
+        identifier_graph.add((prov_entity, self.was_attributed_to, URIRef(self.prov_agent_url)))
+        identifier_graph.add((prov_entity, self.had_primary_source, URIRef(self.source)))
+        identifier_graph.add((prov_entity, self.generated_at_time,
                               Literal(self.prov_date, datatype=XSD.dateTime)))
 
         return identifier_graph
 
-    def __get_oci_rdf_entity(self, baseurl):
-        identifier_graph = Graph()
-        Citation.set_ns(identifier_graph)
-
+    def __get_oci_rdf_entity(self, baseurl, is_prov=False):
         identifier_local_id = "ci-" + self.oci.replace("oci:", "")
         identifier_corpus_id = "id/" + identifier_local_id
-        identifier = URIRef(baseurl + identifier_corpus_id)
 
-        return identifier_graph, identifier, identifier_local_id, identifier_corpus_id
+        identifier = URIRef(baseurl + identifier_corpus_id)
+        prov_entity = None
+
+        if is_prov:
+            prov_baseurl = baseurl + identifier_corpus_id + "/prov/"
+            identifier = URIRef(prov_baseurl + "se/1")
+            identifier_graph = ConjunctiveGraph(identifier=prov_baseurl)
+        else:
+            identifier_graph = ConjunctiveGraph()
+        Citation.set_ns(identifier_graph)
+
+        return identifier_graph, identifier, identifier_local_id, identifier_corpus_id, prov_entity
 
     def get_citation_csv(self):
         s_res = StringIO()
-        writer = DictWriter(s_res, ["oci", "citing", "cited", "creation", "timespan", "journal_sc", "author_sc"])
+        writer = DictWriter(s_res, Citation.header_citation_data)
         writer.writeheader()
         writer.writerow(loads(self.get_citation_json()))
         return s_res.getvalue()
 
-    def get_citation_csv_prov(self):
+    def get_citation_prov_csv(self):
         s_res = StringIO()
-        writer = DictWriter(s_res, ["oci", "agent", "source", "datetime"])
+        writer = DictWriter(s_res, Citation.header_provenance_data)
         writer.writeheader()
-        writer.writerow(loads(self.get_citation_json_prov()))
+        writer.writerow(loads(self.get_citation_prov_json()))
         return s_res.getvalue()
 
     def get_citation_json(self):
@@ -290,13 +396,21 @@ class Citation(object):
 
         return dumps(result, indent=4, ensure_ascii=False)
 
-    def get_citation_json_prov(self):
+    def get_citation_prov_json(self):
         result = {
+            "snapshot": self.prov_entity_number,
             "oci": self.oci.replace("oci:", ""),
             "agent": self.prov_agent_url,
             "source": self.source,
-            "datetime": self.prov_date
+            "created": self.prov_date
         }
+
+        if self.prov_inv_date is not None:
+            result["invalidated"] = self.prov_inv_date
+        if self.prov_description is not None:
+            result["description"] = self.prov_description
+        if self.prov_update is not None:
+            result["update"] = self.prov_update
 
         return dumps(result, indent=4, ensure_ascii=False)
 
@@ -429,12 +543,21 @@ class OCIManager(object):
         }
         self.lookup = {}
         self.inverse_lookup = {}
-        if lookup_file is not None and exists(lookup_file):
-            with open(lookup_file) as f:
-                reader = DictReader(f)
-                for row in reader:
-                    self.lookup[row["code"]] = row["c"]
-                    self.inverse_lookup[row["c"]] = row["code"]
+        self.lookup_file = lookup_file
+        self.lookup_code = -1
+        if self.lookup_file is not None:
+            if exists(self.lookup_file):
+                with open(self.lookup_file, 'r') as f:
+                    lookupcsv_reader = DictReader(f)
+                    code = -1
+                    for row in lookupcsv_reader:
+                        self.lookup[row["code"]] = row["c"]
+                        self.inverse_lookup[row["c"]] = row["code"]
+                        code = int(row['code'])
+                    self.lookup_code = code
+            else:
+                with open(self.lookup_file, 'w') as f:
+                    f.write('"c","code"')
         else:
             self.add_message("__init__", W, "No lookup file has been found (path: '%s')." % lookup_file)
         self.conf = None
@@ -442,7 +565,7 @@ class OCIManager(object):
             with open(conf_file) as f:
                 self.conf = load(f)
         else:
-            self.add_message("__init__", W, "No configuration file has been found (path: '%s')." % lookup_file)
+            self.add_message("__init__", W, "No configuration file has been found (path: '%s')." % conf_file)
 
         if oci_string:
             self.oci = oci_string.lower().strip()
@@ -451,6 +574,45 @@ class OCIManager(object):
         else:
             self.oci = None
             self.add_message("__init__", W, "No OCI specified!")
+
+    def __match_str_to_lookup(self, str_val):
+        ci_str = []
+        for c in str_val:
+            if c not in self.inverse_lookup:
+                self.__update_lookup(c)
+            ci_str.append(str(self.inverse_lookup[c]))
+        return "".join(ci_str)
+
+    def __update_lookup(self, c):
+        if c not in self.inverse_lookup:
+            self.__calc_next_lookup_code()
+            code = str(self.lookup_code)
+            if len(code) == 1:
+                code = "0" + code
+            self.inverse_lookup[c] = code
+            self.lookup[code] = c
+            self.__write_txtblock_on_csv(self.lookup_file, '\n"%s","%s"' % (c, code))
+
+    def __write_txtblock_on_csv(self, csv_path, block_txt):
+        if csv_path is not None and exists(csv_path):
+            self.__check_make_dirs(csv_path)
+            with open(csv_path, 'a', newline='') as csvfile:
+                csvfile.write(block_txt)
+
+    def __calc_next_lookup_code(self):
+        rem = self.lookup_code % 100
+        newcode = self.lookup_code + 1
+        if rem == 89:
+            newcode = newcode * 10
+        self.lookup_code = newcode
+
+    def __check_make_dirs(self, filename) :
+        if not exists(dirname(filename)):
+            try:
+                makedirs(dirname(filename))
+            except OSError as exc:
+                if exc.errno != EEXIST:
+                    raise
 
     def __decode(self, s):
         result = []
@@ -464,12 +626,7 @@ class OCIManager(object):
         return "10." + "".join(result)
 
     def __decode_inverse(self, doi):
-        result = []
-
-        for char in doi.replace("10.", ""):
-            result.append(self.inverse_lookup[char])
-
-        return "".join(result)
+        return self.__match_str_to_lookup(doi.replace("10.", ""))
 
     def get_oci(self, doi_1, doi_2, prefix):
         self.oci = "oci:%s%s-%s%s" % (prefix, self.__decode_inverse(doi_1), prefix, self.__decode_inverse(doi_2))
